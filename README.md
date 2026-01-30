@@ -1,127 +1,201 @@
 # action-repo
 
-This is the GitHub repository that **sends webhook events** to the webhook-repo.
+**GitHub Repository that Triggers Webhook Events**
 
-## What This Repository Does
+This repository is configured to send webhook events to the webhook-repo whenever code is pushed, pull requests are created, or branches are merged. It acts as the **event source** for the webhook integration system.
 
-- **Tracks GitHub actions**: Every push, pull request, and merge triggers a webhook
-- **Sends events**: Automatically sends event details to the webhook receiver
-- **Integration point**: This is where developers make commits and pull requests
+---
 
-## Setup Instructions
+## 📌 Overview
 
-### 1. Create This Repository
+| Component | Role |
+|-----------|------|
+| **action-repo** | Sends GitHub events via webhooks |
+| **webhook-repo** | Receives and processes webhook events |
+| **MongoDB** | Stores event data |
+| **Dashboard UI** | Displays events in real-time |
 
-```bash
-1. Go to GitHub
-2. Click "New Repository"
-3. Name it: action-repo
-4. Initialize with README (recommended)
-5. Click "Create repository"
-```
+---
 
-### 2. Clone to Your Machine
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Git installed
+- GitHub account
+- ngrok running (forwarding to webhook-repo)
+- webhook-repo already set up
+
+### 1. Clone the Repository
 
 ```bash
 git clone https://github.com/YOUR-USERNAME/action-repo.git
 cd action-repo
 ```
 
-### 3. Configure Webhook
+### 2. Configure GitHub Webhook
 
-**In GitHub (on action-repo):**
+Go to your action-repo on GitHub:
 
-1. Go to **Settings** → **Webhooks** → **Add webhook**
-2. **Payload URL**: `https://your-ngrok-url.ngrok.io/webhook`
-   - Replace `your-ngrok-url` with your actual ngrok URL
-   - Example: `https://abc123.ngrok.io/webhook`
-3. **Content type**: `application/json`
-4. **Secret**: Enter the SAME secret as in webhook-repo's `.env`
-   - This prevents unauthorized access
-5. **Events to trigger**: Select these events:
-   - ✓ Push events
-   - ✓ Pull requests
-6. Click **Add webhook**
+1. Click **Settings** (top menu)
+2. Select **Webhooks** (left sidebar)
+3. Click **Add webhook**
 
-### 4. Test the Webhook
+Fill in these details:
 
-Make some changes and push to test:
+| Field | Value |
+|-------|-------|
+| **Payload URL** | `https://your-ngrok-url.ngrok-free.dev/webhook` |
+| **Content type** | `application/json` |
+| **Secret** | Same as `GITHUB_WEBHOOK_SECRET` in webhook-repo `.env` |
+| **Events** | Select: Push events, Pull requests |
+| **Active** | ✓ Checked |
+
+**Example Payload URL:**
+```
+https://jayse-zippy-nonestimably.ngrok-free.dev/webhook
+```
+
+### 3. Verify Webhook Setup
+
+After saving:
+1. Go to **Webhooks** page
+2. Click your webhook
+3. Check **Recent Deliveries** tab
+4. You should see successful (green) delivery status
+
+---
+
+## 📤 Triggering Webhook Events
+
+### PUSH Event (Commit and Push)
 
 ```bash
-# Create a test file
-echo "# Test" > test.txt
+# Create a file
+echo "# My Changes" > changes.txt
 
-# Add, commit, and push
-git add test.txt
-git commit -m "Test push event"
+# Commit
+git add changes.txt
+git commit -m "Add changes"
+
+# Push to GitHub
 git push origin main
 ```
 
-**Then check:**
-1. Go to action-repo Settings → Webhooks → Your webhook → Recent Deliveries
-2. You should see a successful delivery (green checkmark)
-3. Check the webhook-repo dashboard to see the PUSH event
+**Result:** Dashboard shows `PUSH` event from `main` branch
 
-## Triggering Different Events
+---
 
-### PUSH Event
-```bash
-git add .
-git commit -m "Some change"
-git push origin main
-```
-Dashboard will show: `PUSH → main`
+### PULL_REQUEST Event (Create Pull Request)
 
-### PULL_REQUEST Event
 ```bash
 # Create new branch
-git checkout -b feature/new-feature
+git checkout -b feature/my-feature
 
-# Make changes and push
+# Make changes
 echo "New feature" > feature.txt
 git add feature.txt
 git commit -m "Add new feature"
-git push origin feature/new-feature
 
-# Go to GitHub and create a Pull Request
-# Then check dashboard for PULL_REQUEST event
+# Push branch
+git push origin feature/my-feature
 ```
-Dashboard will show: `PULL_REQUEST → feature/new-feature → main`
 
-### MERGE Event
+Then on GitHub:
+1. Go to action-repo
+2. Click **Pull requests** tab
+3. Click **New pull request**
+4. Set base: `main`, compare: `feature/my-feature`
+5. Click **Create pull request**
+
+**Result:** Dashboard shows `PULL_REQUEST` event
+
+---
+
+### MERGE Event (Merge Pull Request)
+
+On GitHub Pull Request page:
+1. Click **Merge pull request**
+2. Confirm merge
+
+**Result:** Dashboard shows `MERGE` event
+
+---
+
+## ✅ Testing the Full Flow
+
+**Step 1: Push code to action-repo**
 ```bash
-# After creating a PR, merge it on GitHub
-# Click "Merge pull request" on the PR page
-
-# Or merge via git
-git checkout main
-git merge feature/new-feature
-git push origin main
-```
-Dashboard will show: `MERGE → feature/new-feature → main`
-
-## Notes
-
-- Keep this repository simple for testing
-- The webhook is automatically triggered - no manual action needed
-- Check webhook delivery logs in GitHub if events don't appear in dashboard
-- Make sure ngrok is running before pushing code
-- The webhook secret must match in both webhook-repo `.env` and GitHub settings
-
-## Files You Can Add
-
-Add any files to test:
-```bash
-# Create a file
-echo "Some content" > file.txt
-
-# Or modify existing README
-echo "## New Section" >> README.md
-
-# Commit and push
-git add .
-git commit -m "Update files"
 git push origin main
 ```
 
-Each push = One PUSH event in the dashboard! 🚀
+**Step 2: Check webhook delivery** (GitHub → Settings → Webhooks → Recent Deliveries)
+- Status should be **200** (green checkmark)
+
+**Step 3: View in dashboard** (http://127.0.0.1:5000/)
+- Event appears in 15 seconds
+- Shows: Author, Action, Branches, Timestamp
+
+---
+
+## 🔍 Troubleshooting
+
+| Problem | Solution |
+|---------|----------|
+| Webhook showing 404 | ngrok URL expired - restart ngrok and update GitHub settings |
+| Secret mismatch | Ensure `GITHUB_WEBHOOK_SECRET` in webhook-repo matches GitHub secret |
+| No events in dashboard | Check webhook delivery logs in GitHub for errors |
+| ngrok not forwarding | Restart: `ngrok http 5000` |
+| Flask not running | Start: `cd webhook-repo && python app.py` |
+
+---
+
+## 📝 GitHub Webhook Data
+
+The webhook sends this data structure:
+
+```json
+{
+  "ref": "refs/heads/main",
+  "before": "abc123...",
+  "after": "def456...",
+  "pusher": {
+    "name": "username",
+    "email": "user@example.com"
+  },
+  "repository": {
+    "name": "action-repo",
+    "full_name": "username/action-repo"
+  }
+}
+```
+
+This data is processed by webhook-repo and stored in MongoDB.
+
+---
+
+## 📊 Event Types Supported
+
+- ✅ **Push** - Code pushed to branch
+- ✅ **Pull Request** - PR created/updated
+- ✅ **Merge** - Branch merged into main
+
+---
+
+## 🔗 Related Repositories
+
+- [webhook-repo](https://github.com/YOUR-USERNAME/webhook-repo) - Receives and processes webhooks
+
+---
+
+## 📋 Notes
+
+- Webhooks are **automatic** - no manual setup needed after initial configuration
+- Each action triggers exactly **one webhook delivery**
+- Events appear in dashboard within **15 seconds**
+- All data is stored in MongoDB for history
+- GitHub webhook delivery logs help with debugging
+
+---
+
+**Project Status:** ✅ Complete and tested
